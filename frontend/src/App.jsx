@@ -8,7 +8,7 @@ export default function App() {
   return (
     <>
       <Navbar />
-      <div className="container">
+      <div className="container py-3">
         <Routes>
           <Route path="/" element={<Navigate to="/employees" replace />} />
           <Route path="/employees" element={<Employees />} />
