@@ -1,17 +1,6 @@
-class AppError extends Error {
-  constructor(message, status = 400, code = 'BAD_REQUEST') {
-    super(message);
-    this.status = status;
-    this.code = code;
-  }
-}
-
 function errorHandler(err, req, res, next) {
-  console.error(err);
-  res.status(err.status || 500).json({
-    error: err.code || 'INTERNAL_ERROR',
-    message: err.message || 'Something went wrong'
-  });
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || 'Internal Server Error';
+  res.status(status).json({ message });
 }
-
-module.exports = { AppError, errorHandler };
+module.exports = { errorHandler };

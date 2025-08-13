@@ -1,10 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const { applyLeave, approveLeave, rejectLeave, listLeaves } = require('../controllers/leaves.controller');
 
-router.post('/', applyLeave);
-router.get('/', listLeaves);
-router.post('/:id/approve', approveLeave);
-router.post('/:id/reject', rejectLeave);
+const controller = require('../controllers/leaves.controller');
+
+// List leaves
+router.get('/', controller.listLeaves);
+
+// Apply leave
+router.post('/', controller.applyLeave);
+
+// Approve leave
+router.post('/:id/approve', controller.approveLeave);
+
+// Reject leave
+router.post('/:id/reject', controller.rejectLeave);
 
 module.exports = router;
