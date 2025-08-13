@@ -3,75 +3,116 @@ import api from '../api'
 
 export default function Balance() {
   const [employees, setEmployees] = useState([])
-  const [selected, setSelected] = useState('')
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
   const [balance, setBalance] = useState(null)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    api.get('/employees').then(res => {
-      setEmployees(res.data)
-      if (res.data.length) setSelected(res.data[0].id)
-    })
-  }, [])
-
-  async function fetchBalance() {
+  
+  // Load list of employees
+  async function loadEmployees() {
     setError('')
     try {
-      const res = await api.get(`/employees/${selected}/leave-balance`)
-      setBalance(res.data)
+      const res = await api.get('/employees')
+      setEmployees(Array.isArray(res.data) ? res.data : [])
     } catch (e) {
-      setError(e?.response?.data?.message || 'Failed to fetch balance')
+      setError(e?.response?.data?.message || 'Failed to load employees')
     }
   }
+
+  useEffect(() => {
+    loadEmployees()
+  }, [])
+
+  // Fetch balance when employee changes
+  async function fetchBalance(id) {
+    if (!id) {
+      setBalance(null)
+      return
+    }
+    setLoading(true)
+    setError('')
+    setBalance(null)
+    try {
+      const res = await api.get(`/employees/${id}/leave-balance`)
+      setBalance(res.data)
+    } catch (e) {
+      setError(e?.response?.data?.message || 'Failed to load balance')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchBalance(selectedEmployeeId)
+  }, [selectedEmployeeId])
 
   return (
     <div className="py-3">
       <h3 className="mb-3">Leave Balance</h3>
-      <div className="card card-body mb-3">
-        <div className="row g-3 align-items-end">
-          <div className="col-md-6">
-            <label className="form-label">Employee</label>
-              <select
-                className="form-select"
-                value={selectedEmployeeId}
-                onChange={e => setSelectedEmployeeId(e.target.value)}
-                required
-              >
-                <option value="">Select Employee</option>
-                {employees
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map(emp => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name} ({emp.email})
-                    </option>
-                  ))}
-              </select>
-          </div>
-          <div className="col-md-3">
-            <button className="btn btn-primary" onClick={fetchBalance}>Get Balance</button>
-          </div>
-          {error && <div className="col-12 text-danger">{error}</div>}
+
+      {error && <div className="alert alert-danger py-2">{error}</div>}
+
+      {/* Employee selection */}
+      <div className="card mb-3">
+        <div className="card-body">
+          <label className="form-label">Select Employee</label>
+          <select
+            className="form-select"
+            value={selectedEmployeeId}
+            onChange={e => setSelectedEmployeeId(e.target.value)}
+            required
+          >
+            <option value="">Select Employee</option>
+            {employees
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(emp => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.name} ({emp.email})
+                </option>
+              ))}
+          </select>
         </div>
       </div>
 
-      {balance && (
-        <div className="card card-body text-center">
-          <div className="row">
-            <div className="col">
-              <h5>{balance.accrued?.toFixed(1)}</h5><small>Accrued</small>
+      {/* Balance display */}
+      <div className="card">
+        <div className="card-body">
+          {!selectedEmployeeId ? (
+            <div className="text-muted">Pick an employee to view balance.</div>
+          ) : loading ? (
+            <div className="text-muted">Loading balance…</div>
+          ) : balance ? (
+            <div className="row g-3">
+              <div className="col-md-3">
+                <div className="border p-3 text-center">
+                  <div className="fw-bold fs-5">{balance.accrued}</div>
+                  <div className="text-muted">Accrued Days</div>
+                </div>
+              </div>
+              <div className="col-md-3">
+                <div className="border p-3 text-center">
+                  <div className="fw-bold fs-5">{balance.approvedDays}</div>
+                  <div className="text-muted">Approved Days</div>
+                </div>
+              </div>
+              <div className="col-md-3">
+                <div className="border p-3 text-center">
+                  <div className="fw-bold fs-5">{balance.pendingDays}</div>
+                  <div className="text-muted">Pending Days</div>
+                </div>
+              </div>
+              <div className="col-md-3">
+                <div className="border p-3 text-center">
+                  <div className="fw-bold fs-5">{balance.available}</div>
+                  <div className="text-muted">Available Days</div>
+                </div>
+              </div>
             </div>
-            <div className="col">
-              <h5>{balance.approvedDays}</h5><small>Approved</small>
-            </div>
-            <div className="col">
-              <h5>{balance.pendingDays}</h5><small>Pending</small>
-            </div>
-            <div className="col">
-              <h5>{balance.available?.toFixed(1)}</h5><small>Available</small>
-            </div>
-          </div>
+          ) : (
+            <div className="text-muted">No balance data available.</div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
