@@ -20,15 +20,15 @@ model Employee {
 }
 
 model LeaveRequest {
-  id              String    @id @default(cuid())
+  id              String     @id @default(cuid())
   employeeId      String
   startDate       DateTime
   endDate         DateTime
   daysRequested   Int
-  status          String    @default("PENDING")
+  status          String     @default("PENDING")
   approverId      String?
   approverRemarks String?
-  createdAt       DateTime  @default(now())
+  createdAt       DateTime   @default(now())
   decidedAt       DateTime?
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)

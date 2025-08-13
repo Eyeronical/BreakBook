@@ -28,7 +28,7 @@ async function deleteEmployee(req, res, next) {
   } catch (err) {
     if (err.code === 'P2003') {
       return res.status(409).json({
-        message: 'Cannot delete employee with existing leave records. Please remove related records or enable cascade.'
+        message: 'Cannot delete employee with existing leave records.'
       });
     }
     next(err);
