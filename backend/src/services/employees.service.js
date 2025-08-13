@@ -2,14 +2,12 @@ const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 const { AppError } = require('../utils/errors')
 
-// List active employees
 async function listEmployees() {
   return prisma.employee.findMany({
     where: { status: { not: 'INACTIVE' } }
   })
 }
 
-// Create new employee with default leave balance = 7
 async function createEmployee(data) {
   return prisma.employee.create({
     data: {
@@ -19,12 +17,10 @@ async function createEmployee(data) {
   })
 }
 
-// Update employee details
 async function updateEmployee(id, data) {
   return prisma.employee.update({ where: { id }, data })
 }
 
-// Delete employee & their leaves (hard delete)
 async function deleteEmployee(id) {
   return prisma.$transaction(async (tx) => {
     await tx.leaveRequest.deleteMany({ where: { employeeId: id } })
@@ -32,7 +28,6 @@ async function deleteEmployee(id) {
   })
 }
 
-// Get leave balance for an employee
 async function leaveBalance(employeeId) {
   const emp = await prisma.employee.findUnique({ where: { id: employeeId } })
   if (!emp) throw new AppError('Employee not found', 404)
@@ -59,7 +54,6 @@ async function leaveBalance(employeeId) {
   }
 }
 
-// Admin can adjust starting leave balance
 async function updateLeaveBalance(employeeId, newBalance) {
   if (newBalance < 0) throw new AppError('Leave balance cannot be negative')
   return prisma.employee.update({

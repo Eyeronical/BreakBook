@@ -7,7 +7,7 @@ function countLeaveDaysExcludingWeekends(startDate, endDate) {
   const date = new Date(startDate)
   while (date <= endDate) {
     const day = date.getDay()
-    if (day !== 0 && day !== 6) count++ // exclude weekends
+    if (day !== 0 && day !== 6) count++ 
     date.setDate(date.getDate() + 1)
   }
   return count
