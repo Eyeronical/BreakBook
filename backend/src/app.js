@@ -1,13 +1,22 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const { errorHandler } = require('./utils/errors');
 
+const { errorHandler } = require('./utils/errors');
 const employeesRoutes = require('./routes/employees.routes');
 const leavesRoutes = require('./routes/leaves.routes');
 
 const app = express();
-app.use(cors({ origin: '*' }));
+
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://breakbook.vercel.app'
+];
+
+app.use(cors({
+  origin: allowedOrigins
+}));
+
 app.use(express.json());
 
 app.get('/', (req, res) => res.send('✅ BreakBook API running'));
