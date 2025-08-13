@@ -54,8 +54,20 @@ export default function Leaves() {
         <div className="row g-3">
           <div className="col-md-3">
             <label className="form-label">Employee</label>
-            <select className="form-select" value={form.employeeId} onChange={e=>setForm({...form,employeeId:e.target.value})}>
-              {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+            <select
+              className="form-select"
+              value={form.employeeId}
+              onChange={e => setForm({ ...form, employeeId: e.target.value })}
+              required
+            >
+              <option value="">Select Employee</option>
+              {employees
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(emp => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name} ({emp.email})
+                  </option>
+                ))}
             </select>
           </div>
           <div className="col-md-2">
