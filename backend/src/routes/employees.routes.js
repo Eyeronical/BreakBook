@@ -1,21 +1,12 @@
-const express = require('express');
-const router = express.Router();
+const express = require('express')
+const router = express.Router()
+const controller = require('../controllers/employees.controller')
 
-const controller = require('../controllers/employees.controller');
+router.get('/', controller.listEmployees)
+router.post('/', controller.createEmployee)
+router.put('/:id', controller.updateEmployee)
+router.delete('/:id', controller.deleteEmployee)
+router.get('/:id/leave-balance', controller.leaveBalance)
+router.patch('/:id/leave-balance', controller.updateLeaveBalance)
 
-// List employees
-router.get('/', controller.listEmployees);
-
-// Create employee
-router.post('/', controller.createEmployee);
-
-// Update employee
-router.put('/:id', controller.updateEmployee);
-
-// Delete employee
-router.delete('/:id', controller.deleteEmployee);
-
-// Leave balance
-router.get('/:id/leave-balance', controller.leaveBalance);
-
-module.exports = router;
+module.exports = router

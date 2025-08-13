@@ -2,15 +2,12 @@ const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 const { AppError } = require('../utils/errors')
 
-// CONFIG
-const START_LEAVE_BALANCE = 7 // default starting days for everyone
-
 function countLeaveDaysExcludingWeekends(startDate, endDate) {
   let count = 0
   const date = new Date(startDate)
   while (date <= endDate) {
     const day = date.getDay()
-    if (day !== 0 && day !== 6) count++ // exclude Sunday(0) and Saturday(6)
+    if (day !== 0 && day !== 6) count++ // exclude weekends
     date.setDate(date.getDate() + 1)
   }
   return count
@@ -27,37 +24,19 @@ async function applyLeave(data) {
     throw new AppError('Employee ID, start date, and end date are required')
   }
 
-  // Employee must exist
   const employee = await prisma.employee.findUnique({ where: { id: employeeId } })
-  if (!employee) {
-    throw new AppError('Employee not found', 404)
-  }
+  if (!employee) throw new AppError('Employee not found', 404)
 
   const sDate = new Date(startDate)
   const eDate = new Date(endDate)
-
-  // Check: dates are valid
-  if (isNaN(sDate) || isNaN(eDate)) {
-    throw new AppError('Invalid start or end date')
-  }
-
-  // Check: end date after start
-  if (eDate < sDate) {
-    throw new AppError('End date cannot be before start date')
-  }
-
-  // Check: cannot apply before joining date
-  if (sDate < new Date(employee.joiningDate)) {
+  if (isNaN(sDate) || isNaN(eDate)) throw new AppError('Invalid dates')
+  if (eDate < sDate) throw new AppError('End date cannot be before start date')
+  if (sDate < new Date(employee.joiningDate))
     throw new AppError('Cannot apply for leave before joining date')
-  }
 
-  // Number of leave days excluding weekends
   const daysRequested = countLeaveDaysExcludingWeekends(sDate, eDate)
-  if (daysRequested <= 0) {
-    throw new AppError('Leave days requested must be at least 1 non-weekend day')
-  }
+  if (daysRequested <= 0) throw new AppError('Leave must be at least 1 day (excluding weekends)')
 
-  // Calculate leave balance
   const approved = await prisma.leaveRequest.aggregate({
     where: { employeeId, status: 'APPROVED' },
     _sum: { daysRequested: true }
@@ -69,35 +48,28 @@ async function applyLeave(data) {
 
   const approvedDays = approved._sum.daysRequested || 0
   const pendingDays = pending._sum.daysRequested || 0
-  const available = START_LEAVE_BALANCE - approvedDays - pendingDays
+  const available = employee.initialLeaveDays - approvedDays - pendingDays
 
-  // Check balance availability
   if (daysRequested > available) {
-    throw new AppError(`Requested days (${daysRequested}) exceed available balance (${available})`)
+    throw new AppError(`Requested ${daysRequested} days, available only ${available}`)
   }
 
-  // Check: overlapping leave requests (PENDING or APPROVED only)
   const overlap = await prisma.leaveRequest.findFirst({
     where: {
       employeeId,
       status: { in: ['PENDING', 'APPROVED'] },
-      OR: [
-        { startDate: { lte: eDate }, endDate: { gte: sDate } }
-      ]
+      OR: [{ startDate: { lte: eDate }, endDate: { gte: sDate } }]
     }
   })
-  if (overlap) {
-    throw new AppError('Overlapping leave request exists for these dates')
-  }
+  if (overlap) throw new AppError('Overlapping leave request exists')
 
-  // OK: create leave record
   return prisma.leaveRequest.create({
     data: {
       employeeId,
       startDate: sDate,
       endDate: eDate,
-      reason: reason || '',
-      daysRequested
+      daysRequested,
+      reason: reason || ''
     }
   })
 }

@@ -3,20 +3,21 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "sqlite" // change to "postgresql" in production if needed
   url      = env("DATABASE_URL")
 }
 
 model Employee {
-  id          String        @id @default(cuid())
-  name        String
-  email       String        @unique
-  department  String?
-  joiningDate DateTime
-  status      String        @default("ACTIVE")
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  leaves      LeaveRequest[]
+  id                String        @id @default(cuid())
+  name              String
+  email             String        @unique
+  department        String?
+  joiningDate       DateTime
+  status            String        @default("ACTIVE")
+  initialLeaveDays  Int           @default(7) // ⭐ starting leave balance
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  leaves            LeaveRequest[]
 }
 
 model LeaveRequest {
@@ -28,9 +29,9 @@ model LeaveRequest {
   status          String     @default("PENDING")
   approverId      String?
   approverRemarks String?
+  reason          String?    // store leave reason
   createdAt       DateTime   @default(now())
   decidedAt       DateTime?
 
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id])
 }
-
