@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Employee {
+  id          String        @id @default(cuid())
+  name        String
+  email       String        @unique
+  department  String?
+  joiningDate DateTime
+  status      String        @default("ACTIVE")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  leaves      LeaveRequest[]
+}
+
+model LeaveRequest {
+  id              String     @id @default(cuid())
+  employeeId      String
+  startDate       DateTime
+  endDate         DateTime
+  daysRequested   Int
+  status          String     @default("PENDING")
+  approverId      String?
+  approverRemarks String?
+  createdAt       DateTime   @default(now())
+  decidedAt       DateTime?
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
