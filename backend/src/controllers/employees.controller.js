@@ -24,8 +24,15 @@ async function updateEmployee(req, res, next) {
 async function deleteEmployee(req, res, next) {
   try {
     await service.deleteEmployee(req.params.id);
-    res.json({ message: 'Deleted' });
-  } catch (err) { next(err); }
+    res.json({ message: 'Deleted successfully' });
+  } catch (err) {
+    if (err.code === 'P2003') {
+      return res.status(409).json({
+        message: 'Cannot delete employee with existing leave records. Please remove related records or enable cascade.'
+      });
+    }
+    next(err);
+  }
 }
 
 async function leaveBalance(req, res, next) {

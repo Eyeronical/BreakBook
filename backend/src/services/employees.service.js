@@ -11,10 +11,13 @@ async function updateEmployee(id, data) {
   return prisma.employee.update({ where: { id }, data });
 }
 async function deleteEmployee(id) {
-  return prisma.employee.delete({ where: { id } });
+  return prisma.employee.update({
+    where: { id },
+    data: { status: 'INACTIVE' }
+  });
 }
+
 async function leaveBalance(employeeId) {
-  // Implement your balance logic; return an object
   return { accrued: 0, approvedDays: 0, pendingDays: 0, available: 0 };
 }
 
