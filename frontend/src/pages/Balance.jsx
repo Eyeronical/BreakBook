@@ -31,9 +31,21 @@ export default function Balance() {
         <div className="row g-3 align-items-end">
           <div className="col-md-6">
             <label className="form-label">Employee</label>
-            <select className="form-select" value={selected} onChange={e=>setSelected(e.target.value)}>
-              {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
-            </select>
+              <select
+                className="form-select"
+                value={selectedEmployeeId}
+                onChange={e => setSelectedEmployeeId(e.target.value)}
+                required
+              >
+                <option value="">Select Employee</option>
+                {employees
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map(emp => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} ({emp.email})
+                    </option>
+                  ))}
+              </select>
           </div>
           <div className="col-md-3">
             <button className="btn btn-primary" onClick={fetchBalance}>Get Balance</button>
