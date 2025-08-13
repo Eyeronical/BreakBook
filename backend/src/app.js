@@ -7,7 +7,6 @@ const { errorHandler } = require('./utils/errors');
 
 const app = express();
 
-app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
 app.get('/', (req, res) => res.send('✅ BreakBook API running'));
