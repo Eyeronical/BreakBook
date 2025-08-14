@@ -33,6 +33,7 @@ async function createEmployee(req, res, next) {
 
 async function updateEmployee(req, res, next) {
   try {
+    console.log('Updating employee:', req.params.id, req.body);
     const data = await service.updateEmployee(req.params.id, req.body);
     res.json({
       success: true,
