@@ -8,13 +8,13 @@ export default function App() {
   return (
     <>
       <Navbar />
-      <div className="container py-3">
+      <div className="container py-4">
         <Routes>
           <Route path="/" element={<Navigate to="/employees" replace />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/leaves" element={<Leaves />} />
           <Route path="/balance" element={<Balance />} />
-          <Route path="*" element={<p className="mt-5">Page not found</p>} />
+          <Route path="*" element={<div className="alert alert-warning mt-5 text-center">Page not found</div>} />
         </Routes>
       </div>
     </>

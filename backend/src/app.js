@@ -1,53 +1,94 @@
-// backend/src/app.js
 const express = require('express');
-const cors = require('cors'); // Enable CORS support
+const cors = require('cors');
 
-// Routers
 const employeesRoutes = require('./routes/employees.routes');
 const leavesRoutes = require('./routes/leaves.routes');
 
-// Error utilities
 const { errorHandler, notFound } = require('./utils/errors');
 
 const app = express();
 
-/* 
-   ---- CORS CONFIG ----
-   Allow localhost:5173 (Vite dev) and your deployed Vercel frontend.
-   You can also set these in .env as: CORS_ORIGIN=http://localhost:5173,https://breakbook.vercel.app
-*/
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,https://breakbook.vercel.app')
-  .split(',')
-  .map(origin => origin.trim());
-
-app.use(cors({
-  origin: function (origin, cb) {
-    // allow REST clients without origin (curl/Postman) and allowed list
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(new Error('Not allowed by CORS'), false);
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://127.0.0.1:5173',
+      'https://BreakBook.vercel.app'
+    ];
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
   },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
-// Handle preflight requests for all routes
-app.options('*', cors());
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    'Origin', 
+    'X-Requested-With', 
+    'Content-Type', 
+    'Accept', 
+    'Authorization',
+    'Cache-Control'
+  ]
+};
 
-/* ---- Global middleware ---- */
-app.use(express.json());
+app.use(cors(corsOptions));
 
-/* ---- Health endpoint ---- */
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    next();
+  });
+}
+
 app.get('/', (req, res) => {
-  res.send('✅ BreakBook API running');
+  res.json({
+    message: '✅ BreakBook API running',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
-/* ---- API routes ---- */
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  next();
+});
+
 app.use('/api/v1/employees', employeesRoutes);
 app.use('/api/v1/leaves', leavesRoutes);
 
-/* ---- 404 for /api paths ---- */
-app.use('/api', notFound);
+app.use('/api/*path', notFound);
 
-/* ---- Global error handler ---- */
 app.use(errorHandler);
+
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  process.exit(0);
+});
 
 module.exports = app;

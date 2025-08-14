@@ -7,15 +7,27 @@ export default function Balance() {
   const [balance, setBalance] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [updating, setUpdating] = useState(false)
+  const [newBalance, setNewBalance] = useState('')
   
-  // Load list of employees
   async function loadEmployees() {
     setError('')
     try {
       const res = await api.get('/employees')
-      setEmployees(Array.isArray(res.data) ? res.data : [])
+      console.log('Employees loaded:', res.data);
+      
+      let employeeData = [];
+      if (res.data && res.data.success) {
+        employeeData = Array.isArray(res.data.data) ? res.data.data : [];
+      } else {
+        employeeData = Array.isArray(res.data) ? res.data : [];
+      }
+      
+      setEmployees(employeeData);
+      console.log('Employees set in balance page:', employeeData);
     } catch (e) {
-      setError(e?.response?.data?.message || 'Failed to load employees')
+      console.error('Error loading employees in balance page:', e);
+      setError(e?.response?.data?.error || e?.response?.data?.message || 'Failed to load employees')
     }
   }
 
@@ -23,10 +35,10 @@ export default function Balance() {
     loadEmployees()
   }, [])
 
-  // Fetch balance when employee changes
   async function fetchBalance(id) {
     if (!id) {
       setBalance(null)
+      setNewBalance('')
       return
     }
     setLoading(true)
@@ -34,9 +46,20 @@ export default function Balance() {
     setBalance(null)
     try {
       const res = await api.get(`/employees/${id}/leave-balance`)
-      setBalance(res.data)
+      console.log('Balance loaded:', res.data); 
+      
+      let balanceData = null;
+      if (res.data && res.data.success) {
+        balanceData = res.data.data;
+      } else {
+        balanceData = res.data;
+      }
+      
+      setBalance(balanceData)
+      setNewBalance(balanceData?.allocated?.toString() || balanceData?.accrued?.toString() || '')
     } catch (e) {
-      setError(e?.response?.data?.message || 'Failed to load balance')
+      console.error('Error loading balance:', e); 
+      setError(e?.response?.data?.error || e?.response?.data?.message || 'Failed to load balance')
     } finally {
       setLoading(false)
     }
@@ -46,73 +69,180 @@ export default function Balance() {
     fetchBalance(selectedEmployeeId)
   }, [selectedEmployeeId])
 
+  async function updateBalance(e) {
+    e.preventDefault()
+    if (!selectedEmployeeId || !newBalance) return
+    
+    const balanceValue = parseInt(newBalance)
+    if (isNaN(balanceValue) || balanceValue < 0) {
+      setError('Please enter a valid number of days (0 or more)')
+      return
+    }
+
+    setUpdating(true)
+    setError('')
+    
+    try {
+      await api.patch(`/employees/${selectedEmployeeId}/leave-balance`, {
+        balance: balanceValue
+      })
+      await fetchBalance(selectedEmployeeId)
+    } catch (e) {
+      setError(e?.response?.data?.error || e?.response?.data?.message || 'Failed to update balance')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId)
+
   return (
     <div className="py-3">
-      <h3 className="mb-3">Leave Balance</h3>
-
-      {error && <div className="alert alert-danger py-2">{error}</div>}
-
-      {/* Employee selection */}
-      <div className="card mb-3">
-        <div className="card-body">
-          <label className="form-label">Select Employee</label>
-          <select
-            className="form-select"
-            value={selectedEmployeeId}
-            onChange={e => setSelectedEmployeeId(e.target.value)}
-            required
-          >
-            <option value="">Select Employee</option>
-            {employees
-              .sort((a, b) => a.name.localeCompare(b.name))
-              .map(emp => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name} ({emp.email})
-                </option>
-              ))}
-          </select>
-        </div>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h3 className="mb-0">Leave Balance Management</h3>
       </div>
 
-      {/* Balance display */}
-      <div className="card">
+      {error && <div className="alert alert-danger py-2 mb-3">{error}</div>}
+
+      <div className="card mb-4">
         <div className="card-body">
-          {!selectedEmployeeId ? (
-            <div className="text-muted">Pick an employee to view balance.</div>
-          ) : loading ? (
-            <div className="text-muted">Loading balance…</div>
-          ) : balance ? (
-            <div className="row g-3">
-              <div className="col-md-3">
-                <div className="border p-3 text-center">
-                  <div className="fw-bold fs-5">{balance.accrued}</div>
-                  <div className="text-muted">Accrued Days</div>
-                </div>
-              </div>
-              <div className="col-md-3">
-                <div className="border p-3 text-center">
-                  <div className="fw-bold fs-5">{balance.approvedDays}</div>
-                  <div className="text-muted">Approved Days</div>
-                </div>
-              </div>
-              <div className="col-md-3">
-                <div className="border p-3 text-center">
-                  <div className="fw-bold fs-5">{balance.pendingDays}</div>
-                  <div className="text-muted">Pending Days</div>
-                </div>
-              </div>
-              <div className="col-md-3">
-                <div className="border p-3 text-center">
-                  <div className="fw-bold fs-5">{balance.available}</div>
-                  <div className="text-muted">Available Days</div>
-                </div>
-              </div>
+          <h5 className="card-title mb-3">Select Employee</h5>
+          <div className="row g-3 align-items-end">
+            <div className="col-md-8">
+              <label className="form-label">Employee</label>
+              <select
+                className="form-select"
+                value={selectedEmployeeId}
+                onChange={e => setSelectedEmployeeId(e.target.value)}
+              >
+                <option value="">Choose an employee...</option>
+                {employees.length > 0 ? (
+                  employees
+                    .filter(emp => emp && emp.id && emp.name) 
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(emp => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name} ({emp.email})
+                      </option>
+                    ))
+                ) : (
+                  <option disabled>No employees available</option>
+                )}
+              </select>
+              {employees.length === 0 && (
+                <small className="text-muted">
+                  No employees found. Please add employees first.
+                </small>
+              )}
             </div>
-          ) : (
-            <div className="text-muted">No balance data available.</div>
-          )}
+            {selectedEmployee && (
+              <div className="col-md-4">
+                <div className="text-muted">
+                  <small>
+                    Joined: {new Date(selectedEmployee.joiningDate).toLocaleDateString()}
+                  </small>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {selectedEmployeeId && (
+        <div className="card mb-4">
+          <div className="card-header">
+            <h5 className="mb-0">Current Balance</h5>
+          </div>
+          <div className="card-body">
+            {loading ? (
+              <div className="text-center py-3">
+                <div className="spinner-border spinner-border-sm me-2"></div>
+                Loading balance information...
+              </div>
+            ) : balance ? (
+              <>
+                <div className="row g-3 mb-4">
+                  <div className="col-md-3">
+                    <div className="border rounded p-3 text-center bg-light">
+                      <div className="fw-bold fs-4 text-primary">{balance.allocated || balance.accrued || 0}</div>
+                      <div className="text-muted small">Total Allocated</div>
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <div className="border rounded p-3 text-center">
+                      <div className="fw-bold fs-4 text-success">{balance.used || balance.approvedDays || 0}</div>
+                      <div className="text-muted small">Days Used</div>
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <div className="border rounded p-3 text-center">
+                      <div className="fw-bold fs-4 text-warning">{balance.pending || balance.pendingDays || 0}</div>
+                      <div className="text-muted small">Pending Requests</div>
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <div className="border rounded p-3 text-center bg-light">
+                      <div className="fw-bold fs-4 text-info">{balance.available || 0}</div>
+                      <div className="text-muted small">Available Days</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <form onSubmit={updateBalance}>
+                  <div className="row g-3 align-items-end">
+                    <div className="col-md-3">
+                      <label className="form-label">Update Total Allocation</label>
+                      <input
+                        type="number"
+                        className="form-control"
+                        value={newBalance}
+                        onChange={e => setNewBalance(e.target.value)}
+                        min="0"
+                        max="365"
+                        placeholder="Enter days"
+                      />
+                    </div>
+                    <div className="col-md-3">
+                      <button 
+                        type="submit" 
+                        className="btn btn-primary w-100"
+                        disabled={updating || !newBalance}
+                      >
+                        {updating ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2"></span>
+                            Updating...
+                          </>
+                        ) : (
+                          'Update Balance'
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="form-text">
+                    This will set the total annual leave allocation for this employee.
+                  </div>
+                </form>
+              </>
+            ) : (
+              <div className="text-muted text-center py-3">
+                No balance information available for this employee.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!selectedEmployeeId && (
+        <div className="card">
+          <div className="card-body text-center py-5">
+            <div className="text-muted">
+              <div className="fs-1 mb-3">👤</div>
+              <p>Select an employee above to view and manage their leave balance.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
